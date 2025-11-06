@@ -11,7 +11,10 @@ export function parseBackendMessage(raw: unknown): BackendLivenessMessage {
       const parsed = JSON.parse(raw);
       return normalize(parsed);
     } catch (error) {
-      throw new Error("Mensagem inválida recebida do backend");
+      if (error instanceof SyntaxError) {
+        throw new Error("Mensagem inválida recebida do backend");
+      }
+      throw error;
     }
   }
 
@@ -34,7 +37,7 @@ function normalize(data: Record<string, unknown>): BackendLivenessMessage {
   const timestamp = String(data.timestamp ?? new Date().toISOString());
 
   if (Number.isNaN(confidence)) {
-    throw new Error("Confiança inválida envida pelo backend");
+    throw new Error("Confiança inválida enviada pelo backend");
   }
 
   const boundedConfidence = Math.max(0, Math.min(1, confidence));

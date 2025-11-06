@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 
+from app.liveness.engine import LivenessEngine, create_detector_from_env
 from app.schemas import HealthResponse, ValidationRequest, ValidationResponse
 from app.services.liveness_service import LivenessService
 
@@ -14,7 +15,8 @@ app = FastAPI(title="Liveness API", version="0.1.0")
 
 
 def get_liveness_service() -> LivenessService:
-    return LivenessService()
+    engine = LivenessEngine(detector=create_detector_from_env())
+    return LivenessService(engine=engine)
 
 
 @app.get("/", response_model=HealthResponse)
@@ -42,6 +44,9 @@ async def liveness_socket(
     try:
         while True:
             message = await websocket.receive()
+            if message.get("type") == "websocket.disconnect":
+                service.reset_session()
+                break
             payload = message.get("bytes") or message.get("text")
             if payload is None:
                 continue
