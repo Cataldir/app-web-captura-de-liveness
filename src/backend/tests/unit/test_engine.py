@@ -28,7 +28,9 @@ def test_simple_detector_returns_deterministic_result() -> None:
     assert first.confidence == second.confidence
 
 
-def test_create_detector_from_env_falls_back_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_create_detector_from_env_falls_back_when_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("LIVENESS_DETECTOR_PROVIDER", "gesture")
     monkeypatch.setattr(engine_module, "GestureServerClient", None)
     detector = create_detector_from_env()
@@ -36,7 +38,9 @@ def test_create_detector_from_env_falls_back_when_unavailable(monkeypatch: pytes
     monkeypatch.delenv("LIVENESS_DETECTOR_PROVIDER", raising=False)
 
 
-def test_gesture_detector_requires_library(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gesture_detector_requires_library(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(engine_module, "GestureServerClient", None)
     with pytest.raises(RuntimeError):
         GestureServerDetector()

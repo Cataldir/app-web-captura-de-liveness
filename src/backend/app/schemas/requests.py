@@ -12,4 +12,7 @@ class ValidationRequest(BaseModel):
 
     user_id: str = Field(..., description="Identifier of the person being validated")
     samples: List[str] = Field(default_factory=list, description="Base64 encoded media samples")
-    metadata: Optional[dict[str, str]] = Field(default=None, description="Additional attributes about the capture session")
+    metadata: Optional[dict[str, str]] = Field(
+        default=None,
+        description="Additional attributes about the capture session",
+    )

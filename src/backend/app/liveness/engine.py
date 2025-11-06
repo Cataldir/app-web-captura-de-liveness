@@ -48,7 +48,12 @@ class LivenessDetector(ABC):
     """Provides the contract for pluggable liveness detection strategies."""
 
     @abstractmethod
-    def evaluate(self, frame: bytes, *, context: Optional[Dict[str, Any]] = None) -> LivenessResult:
+    def evaluate(
+        self,
+        frame: bytes,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> LivenessResult:
         """Return a liveness result for a raw video frame payload."""
 
     def reset_session(self) -> None:  # pragma: no cover - optional override
@@ -68,17 +73,19 @@ class GestureServerDetector(LivenessDetector):
         callback_timeout: float = 2.5,
     ) -> None:
         if GestureServerClient is None:
-            raise RuntimeError(
-                "liveness-detector is not available on this platform."
-            )
+            raise RuntimeError("liveness-detector is not available on this platform.")
 
         resolved_socket = socket_path or os.getenv(
             "LIVENESS_SOCKET_PATH",
             "\\\\.\\pipe\\liveness_socket" if os.name == "nt" else "/tmp/liveness_socket",
         )
         resolved_language = language or os.getenv("LIVENESS_LANGUAGE", "en")
-        resolved_num_gestures = num_gestures or int(os.getenv("LIVENESS_NUM_GESTURES", "2"))
-        gestures_list = list(gestures) if gestures else _parse_csv_env("LIVENESS_GESTURES")
+        resolved_num_gestures = num_gestures or int(
+            os.getenv("LIVENESS_NUM_GESTURES", "2")
+        )
+        gestures_list = (
+            list(gestures) if gestures else _parse_csv_env("LIVENESS_GESTURES")
+        )
 
         self._client = GestureServerClient(
             language=resolved_language,
@@ -105,7 +112,11 @@ class GestureServerDetector(LivenessDetector):
     def _handle_alive(self, alive: bool) -> None:
         with self._lock:
             self._last_alive = alive
-            self._last_reason = "Detector confirmou liveness" if alive else "Detector identificou spoof"
+            self._last_reason = (
+                "Detector confirmou liveness"
+                if alive
+                else "Detector identificou spoof"
+            )
         self._result_event.set()
 
     def _handle_message(self, message: str) -> None:
@@ -121,7 +132,12 @@ class GestureServerDetector(LivenessDetector):
             raise ValueError("Frame inválido: não foi possível decodificar para imagem")
         return image
 
-    def evaluate(self, frame: bytes, *, context: Optional[Dict[str, Any]] = None) -> LivenessResult:
+    def evaluate(
+        self,
+        frame: bytes,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> LivenessResult:
         image = self._decode_frame(frame)
         self._ensure_server()
 
@@ -130,7 +146,9 @@ class GestureServerDetector(LivenessDetector):
             self._client.process_frame(image)
 
         if not self._result_event.wait(self._callback_timeout):
-            raise TimeoutError("Liveness-detector não respondeu dentro do tempo limite")
+            raise TimeoutError(
+                "Liveness-detector não respondeu dentro do tempo limite"
+            )
 
         with self._lock:
             is_live = bool(self._last_alive)
@@ -159,7 +177,12 @@ class GestureServerDetector(LivenessDetector):
 class SimpleHeuristicDetector(LivenessDetector):
     """Deterministic heuristic used as default while a real detector is not available."""
 
-    def evaluate(self, frame: bytes, *, context: Optional[Dict[str, Any]] = None) -> LivenessResult:
+    def evaluate(
+        self,
+        frame: bytes,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> LivenessResult:
         if not frame:
             return LivenessResult(
                 is_live=False,
@@ -172,7 +195,11 @@ class SimpleHeuristicDetector(LivenessDetector):
         # Normalize the first byte of the digest to obtain a pseudo-confidence score.
         confidence = round(digest[0] / 255, 3)
         is_live = confidence >= 0.5
-        reason = "Confidence threshold satisfied" if is_live else "Confidence threshold not met"
+        reason = (
+            "Confidence threshold satisfied"
+            if is_live
+            else "Confidence threshold not met"
+        )
         if context and context.get("attempt"):
             reason = f"{reason} on attempt {context['attempt']}"
 
@@ -218,12 +245,16 @@ def _parse_csv_env(name: str) -> list[str]:
 
 
 def create_detector_from_env() -> LivenessDetector:
-    provider = os.getenv("LIVENESS_DETECTOR_PROVIDER", "heuristic").strip().lower()
+    provider = os.getenv("LIVENESS_DETECTOR_PROVIDER", "heuristic")
+    normalized_provider = provider.strip().lower()
 
-    if provider in {"gesture", "liveness-detector"}:
+    if normalized_provider in {"gesture", "liveness-detector"}:
         try:
             return GestureServerDetector()
         except Exception as exc:  # pragma: no cover - depends on environment
-            LOGGER.warning("Falha ao inicializar liveness-detector, usando heurística. Motivo: %s", exc)
+            LOGGER.warning(
+                "Falha ao inicializar liveness-detector, usando heurística. Motivo: %s",
+                exc,
+            )
 
     return SimpleHeuristicDetector()

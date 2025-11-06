@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 from statistics import mean
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
 from app.liveness.engine import LivenessEngine, LivenessResult
 from app.schemas import ValidationRequest, ValidationResponse
@@ -29,9 +29,18 @@ class LivenessService:
             aggregate_confidence = 0.0
             reason = "No samples provided"
         else:
-            aggregate_is_live = sum(result.is_live for result in results) >= (len(results) / 2)
-            aggregate_confidence = round(mean(result.confidence for result in results), 3)
-            reason = "Majority indicates liveness" if aggregate_is_live else "Majority indicates spoof"
+            aggregate_is_live = sum(result.is_live for result in results) >= (
+                len(results) / 2
+            )
+            aggregate_confidence = round(
+                mean(result.confidence for result in results),
+                3,
+            )
+            reason = (
+                "Majority indicates liveness"
+                if aggregate_is_live
+                else "Majority indicates spoof"
+            )
 
         return ValidationResponse(
             user_id=request.user_id,
