@@ -77,7 +77,11 @@ class GestureServerDetector(LivenessDetector):
 
         resolved_socket = socket_path or os.getenv(
             "LIVENESS_SOCKET_PATH",
-            "\\\\.\\pipe\\liveness_socket" if os.name == "nt" else "/tmp/liveness_socket",
+            (
+                "\\\\.\\pipe\\liveness_socket"
+                if os.name == "nt"
+                else "/tmp/liveness_socket"
+            ),
         )
         resolved_language = language or os.getenv("LIVENESS_LANGUAGE", "en")
         resolved_num_gestures = num_gestures or int(
@@ -113,9 +117,7 @@ class GestureServerDetector(LivenessDetector):
         with self._lock:
             self._last_alive = alive
             self._last_reason = (
-                "Detector confirmou liveness"
-                if alive
-                else "Detector identificou spoof"
+                "Detector confirmou liveness" if alive else "Detector identificou spoof"
             )
         self._result_event.set()
 
@@ -146,9 +148,7 @@ class GestureServerDetector(LivenessDetector):
             self._client.process_frame(image)
 
         if not self._result_event.wait(self._callback_timeout):
-            raise TimeoutError(
-                "Liveness-detector não respondeu dentro do tempo limite"
-            )
+            raise TimeoutError("Liveness-detector não respondeu dentro do tempo limite")
 
         with self._lock:
             is_live = bool(self._last_alive)
