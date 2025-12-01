@@ -14,7 +14,7 @@ from app.services.model_service import ModelComparisonResult, ModelService
 
 def test_health_probe(client: TestClient) -> None:
     response = client.get("/")
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["status"] == "ok"
 
@@ -139,3 +139,93 @@ def test_image_similarity_endpoint(
     assert payload["embeddings"]["status"] == expected_status
     assert payload["model"]["status"] == expected_status
     assert payload["face_api"]["status"] == expected_status
+    assert payload["strategies"] == ["embeddings", "model", "face_api"]
+
+    expected_embedding_similarity = 1.0 if expected_status == "approved" else 0.0
+    expected_model_similarity = 0.99 if expected_status == "approved" else 0.15
+    expected_face_similarity = 0.985 if expected_status == "approved" else 0.2
+    expected_similarity = (
+        expected_embedding_similarity
+        + expected_model_similarity
+        + expected_face_similarity
+    ) / 3
+
+    assert payload["similarity"] == pytest.approx(expected_similarity, rel=1e-6)
+
+
+@pytest.mark.parametrize(
+    "first_payload,second_payload,expected_status",
+    [
+        (b"WHITE", b"WHITE", "approved"),
+        (b"WHITE", b"BLACK", "not approved"),
+    ],
+)
+def test_image_similarity_base64_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    client: TestClient,
+    first_payload: bytes,
+    second_payload: bytes,
+    expected_status: str,
+) -> None:
+    embeddings_map = {
+        b"WHITE": np.array([1.0, 0.0], dtype=np.float32),
+        b"BLACK": np.array([0.0, 1.0], dtype=np.float32),
+    }
+
+    def fake_generate(
+        _self: EmbeddingsService,
+        payload: bytes,
+    ) -> np.ndarray:
+        return embeddings_map[payload]
+
+    monkeypatch.setattr(EmbeddingsService, "_generate_embedding", fake_generate)
+
+    def fake_model_compare(
+        _self: ModelService,
+        _first: bytes,
+        _second: bytes,
+    ) -> ModelComparisonResult:
+        same_person = expected_status == "approved"
+        explanation = "Images match" if same_person else "Faces differ"
+        similarity_value = 0.99 if same_person else 0.15
+        return ModelComparisonResult(
+            similarity=similarity_value,
+            status=expected_status,
+            same_person=same_person,
+            explanation=explanation,
+        )
+
+    monkeypatch.setattr(ModelService, "compare_images", fake_model_compare)
+
+    response = client.post(
+        "/images/similarity/base64",
+        json={
+            "first_image": base64.b64encode(first_payload).decode(),
+            "second_image": base64.b64encode(second_payload).decode(),
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == expected_status
+    assert payload["strategies"] == ["embeddings", "model"]
+    assert payload["face_api"] is None
+
+    expected_embedding_similarity = 1.0 if expected_status == "approved" else 0.0
+    expected_model_similarity = 0.99 if expected_status == "approved" else 0.15
+    expected_similarity = (expected_embedding_similarity + expected_model_similarity) / 2
+    assert payload["similarity"] == pytest.approx(expected_similarity, rel=1e-6)
+
+
+def test_image_similarity_base64_requires_urls_for_face_api(client: TestClient) -> None:
+    response = client.post(
+        "/images/similarity/base64",
+        json={
+            "first_image": base64.b64encode(b"WHITE").decode(),
+            "second_image": base64.b64encode(b"BLACK").decode(),
+            "strategies": ["face_api"],
+        },
+    )
+
+    assert response.status_code == 400, response.text
+    assert "Face API strategy requires accessible image URLs" in response.text

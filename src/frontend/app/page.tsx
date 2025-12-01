@@ -16,20 +16,23 @@ const API_URL =
         NEXT_PUBLIC_BACKEND_HTTP_URL ?? undefined)
     : undefined) ?? "http://localhost:8000";
 
+type SimilarityStrategy = "embeddings" | "model" | "face_api";
+
 type SimilarityEvaluationResponse = {
   similarity: number;
   status: "approved" | "not approved";
-  embeddings: {
+  strategies: SimilarityStrategy[];
+  embeddings?: {
     similarity: number;
     status: "approved" | "not approved";
   };
-  model: {
+  model?: {
     similarity: number;
     status: "approved" | "not approved";
     same_person: boolean;
     explanation: string;
   };
-  face_api: {
+  face_api?: {
     similarity: number;
     status: "approved" | "not approved";
     is_identical: boolean;
@@ -39,7 +42,7 @@ type SimilarityEvaluationResponse = {
 };
 
 type StrategyTableRow = {
-  key: string;
+  key: SimilarityStrategy;
   label: string;
   samePerson: boolean;
   similarity: number;
@@ -280,33 +283,46 @@ export default function HomePage() {
     }
 
     const duration = evaluationDuration ?? 0;
+    const rows: StrategyTableRow[] = [];
 
-    return [
-      {
-        key: "embeddings",
-        label: "Embeddings",
-        samePerson: evaluationResult.embeddings.status === "approved",
-        similarity: evaluationResult.embeddings.similarity,
-        durationMs: duration
-      },
-      {
-        key: "model",
-        label: "Modelo Generativo",
-        samePerson: evaluationResult.model.same_person,
-        similarity: evaluationResult.model.similarity,
-        note: evaluationResult.model.explanation,
-        durationMs: duration
-      },
-      {
-        key: "face",
-        label: "Face API",
-        samePerson: evaluationResult.face_api.is_identical,
-        similarity: evaluationResult.face_api.similarity,
-        confidence: evaluationResult.face_api.confidence,
-        note: evaluationResult.face_api.reason,
-        durationMs: duration
+    for (const strategy of evaluationResult.strategies) {
+      if (strategy === "embeddings" && evaluationResult.embeddings) {
+        rows.push({
+          key: "embeddings",
+          label: "Embeddings",
+          samePerson: evaluationResult.embeddings.status === "approved",
+          similarity: evaluationResult.embeddings.similarity,
+          durationMs: duration
+        });
+        continue;
       }
-    ];
+
+      if (strategy === "model" && evaluationResult.model) {
+        rows.push({
+          key: "model",
+          label: "Modelo Generativo",
+          samePerson: evaluationResult.model.same_person,
+          similarity: evaluationResult.model.similarity,
+          note: evaluationResult.model.explanation,
+          durationMs: duration
+        });
+        continue;
+      }
+
+      if (strategy === "face_api" && evaluationResult.face_api) {
+        rows.push({
+          key: "face_api",
+          label: "Face API",
+          samePerson: evaluationResult.face_api.is_identical,
+          similarity: evaluationResult.face_api.similarity,
+          confidence: evaluationResult.face_api.confidence,
+          note: evaluationResult.face_api.reason,
+          durationMs: duration
+        });
+      }
+    }
+
+    return rows;
   }, [evaluationResult, evaluationDuration]);
 
   useEffect(() => {

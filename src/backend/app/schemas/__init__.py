@@ -9,16 +9,23 @@ from .responses import (
     ModelSimilarityPayload,
     ValidationResponse,
 )
-from .requests import ImageSimilarityRequest, ValidationRequest
+from .requests import (
+    ImageSimilarityBase64Request,
+    ImageSimilarityRequest,
+    SimilarityStrategy,
+    ValidationRequest,
+)
 
 __all__ = [
     "EmbeddingsSimilarityPayload",
     "FaceAPISimilarityPayload",
     "HealthResponse",
+    "ImageSimilarityBase64Request",
     "ImageSimilarityRequest",
     "ImageSimilarityResponse",
     "LivenessPayload",
     "ModelSimilarityPayload",
+    "SimilarityStrategy",
     "ValidationRequest",
     "ValidationResponse",
 ]

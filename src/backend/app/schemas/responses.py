@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -52,6 +52,10 @@ class FaceAPISimilarityPayload(BaseModel):
 class ImageSimilarityResponse(BaseModel):
     similarity: float = Field(ge=0.0, le=1.0)
     status: Literal["approved", "not approved"]
-    embeddings: EmbeddingsSimilarityPayload
-    model: ModelSimilarityPayload
-    face_api: FaceAPISimilarityPayload
+    strategies: List[Literal["embeddings", "model", "face_api"]] = Field(
+        default_factory=list,
+        description="Strategies executed when computing this response",
+    )
+    embeddings: Optional[EmbeddingsSimilarityPayload] = None
+    model: Optional[ModelSimilarityPayload] = None
+    face_api: Optional[FaceAPISimilarityPayload] = None

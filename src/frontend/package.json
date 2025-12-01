@@ -19,8 +19,8 @@
     "@types/node": "20.11.4",
     "@types/react": "18.2.46",
     "@types/react-dom": "18.2.18",
-  "@testing-library/react": "14.2.1",
-  "@testing-library/jest-dom": "6.4.2",
+    "@testing-library/react": "14.2.1",
+    "@testing-library/jest-dom": "6.4.2",
     "@vitest/coverage-v8": "1.2.2",
     "autoprefixer": "10.4.16",
     "eslint": "8.57.0",
@@ -30,5 +30,6 @@
     "tailwindcss": "3.4.1",
     "typescript": "5.4.5",
     "vitest": "1.2.2"
-  }
+  },
+  "packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
 }
